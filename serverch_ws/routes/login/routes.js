@@ -21,7 +21,7 @@ router.get('/users', (req, res) => {
 
   // Requête SQL pour récupérer les informations des utilisateurs et leur rôle
   const query = `
-    SELECT admin_user.Nom, admin_user.Email, role.code AS roleCode
+    SELECT admin_user.Iduser, admin_user.Nom, admin_user.Email, role.code AS roleCode
     FROM admin_user
     INNER JOIN role ON admin_user.id_role = role.id
   `;
@@ -40,6 +40,7 @@ router.get('/users', (req, res) => {
 
     // Transformation des résultats pour les structurer
     const data = results.map(row => ({
+      IDUSER: row.Iduser,
       NOM: row.Nom,
       EMAIL: row.Email,
       ROLECODE: row.roleCode,
@@ -48,6 +49,30 @@ router.get('/users', (req, res) => {
     connection.end(); // Ferme la connexion après l'exécution de la requête
 
     res.json(data); // Envoie les résultats au client
+  });
+});
+
+//supp
+router.delete('/users/deletusers/:id', (req, res) => {
+  const userId = req.params.id; // ID de l'utilisateur
+  const connection = mysql.createConnection(dbConfig);
+
+  const query = 'DELETE FROM admin_user WHERE IdUser = ?';
+
+  connection.query(query, [userId], (error, results) => {
+    if (error) {
+      console.error('Erreur serveur:', error.message);
+      connection.end();
+      return res.status(500).json({ message: 'Erreur serveur' });
+    }
+
+    if (results.affectedRows === 0) {
+      connection.end();
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    connection.end();
+    res.status(200).json({ message: 'Utilisateur supprimé avec succès' });
   });
 });
 
@@ -178,7 +203,7 @@ async function fetchCLOB(lob) {
 //editUser
 router.get('/user/:Id', async (req, res) => {
   const Id = req.params.Id;
-   console.log(Id + 'hello')
+  //  console.log(Id + 'hello')
   const connection = mysql.createConnection(dbConfig);
 
   const query = `SELECT Email, Nom FROM admin_user WHERE Iduser = ?`;
@@ -202,6 +227,87 @@ router.get('/user/:Id', async (req, res) => {
     connection.end();
   });
 });
+
+router.get('/users/edit/:Id', (req, res) => {
+  const { Id } = req.params;
+  const connection = mysql.createConnection(dbConfig);
+
+  connection.connect(err => {
+    if (err) {
+      console.error('Erreur de connexion à la base de données:', err.message);
+      return res.status(500).json({ message: 'Erreur de connexion à la base de données' });
+    }
+
+    const query = `
+      SELECT admin_user.Iduser, admin_user.Email, admin_user.Nom, role.code AS code 
+      FROM admin_user
+      INNER JOIN role ON admin_user.id_role = role.id
+      WHERE admin_user.Iduser = ?`;
+
+    connection.query(query, [Id], (error, results) => {
+      if (error) {
+        console.error('Erreur lors de la requête:', error.message);
+        connection.end();
+        return res.status(500).json({ message: 'Erreur serveur' });
+      }
+
+      if (results.length === 0) {
+        connection.end();
+        return res.status(404).json({ message: 'Enregistrement non trouvé' });
+      }
+
+      const record = {
+        IDUSER: results[0].Id,
+        email: results[0].Email,
+        nom: results[0].Nom,
+        rolecode: results[0].RoleCode,
+      };
+
+      connection.end();
+      res.json(record);
+    });
+  });
+});
+
+// Route pour mettre à jour les informations d'un utilisateur
+router.put('/users/update/:Id', async(req, res) => {
+  const Id = req.params.Id;
+  const updatedUser = req.body;
+  try{
+    const connection = mysql.createConnection(dbConfig);
+    const query = `
+    UPDATE admin_user 
+    SET  Email = ?, Nom = ?, id_role = (
+      SELECT id FROM role WHERE code = ?
+    )
+    WHERE Iduser = ?`;
+    const values = [updatedUser.email, updatedUser.nom, updatedUser.code, Id];
+
+    const result = await new Promise((resolve, reject) => {
+    connection.query(query, values, (error, result) => {
+      if (error) {
+        console.error('Erreur lors de la mise à jour de l\'endpoint:', error);
+        reject(error);
+        return;
+      }
+
+      if (result.affectedRows === 1) {
+        resolve({ status: 200, message: 'Endpoint mis à jour avec succès' });
+      } else {
+        reject({ status: 404, message: 'Endpoint non trouvé' });
+      }
+
+      connection.end();
+    });
+  });
+
+  res.status(result.status).json({ message: result.message });
+} catch (error) {
+  console.error('Erreur lors de la mise à jour de l\'endpoint:', error);
+  res.status(500).json({ message: 'Erreur serveur' });
+}
+});
+
 
 
 

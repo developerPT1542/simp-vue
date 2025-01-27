@@ -37,6 +37,8 @@ import AddProcUrl from '@/components/AddProcUrl.vue';
 import EditProcUrl from '@/components/EditProcUrl.vue';
 import UsersWS from '@/components/UsersWS.vue';
 import LifeCycle from '@/components/LifeCycle.vue';
+import EditUser from '@/components/EditUser.vue';
+
 
 
 
@@ -74,7 +76,14 @@ const router = createRouter({
           hideNavbar: true,
          }
       },
-
+      {
+        path: '/user/EditUser/:Id',
+        name: 'EditUser',
+        component: EditUser,
+        meta: {
+          hideNavbar: true,
+         }
+      },
       {
         path: '/SettingSimp/:Id',
         name: 'SettingSimp',
